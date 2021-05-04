@@ -259,3 +259,38 @@ ggplot() +
   labs(x= "Time", y="Speed (m/s)")
 #-------------------------------------------------------------------------------------------------------------------------
 
+
+#TASK 4: DERIVING MOVEMENT PARAMETERS II: ROLLING WINDOW FUNCTIONS
+
+example <- rnorm(10)
+rollmean(example,k = 3,fill = NA,align = "left")
+rollmean(example,k = 4,fill = NA,align = "left")
+
+caroRW <- caro60 %>%
+  mutate(RW3 = rollmean(speed, k= 3, fill = NA, align = "left"),
+         RW4 = rollmean(speed, k= 4, fill = NA, align = "left"),
+         RW10 = rollmean(speed, k= 10, fill = NA, align = "left"),
+         RW20 = rollmean(speed, k= 20, fill = NA, align = "left"),
+         RW30 = rollmean(speed, k= 30, fill = NA, align = "left"),
+         RW50 = rollmean(speed, k= 50, fill = NA, align = "left"))
+
+
+
+ggplot(data = caroRW)+
+  geom_line(aes(x = DateTimeUTC, y = speed, color ="True"))+
+  geom_line(aes(x = DateTimeUTC, y = RW4, color ="RW4"))+
+  geom_line(aes(x = DateTimeUTC, y = RW10, color ="RW10"))+
+  geom_line(aes(x = DateTimeUTC, y = RW20, color ="RW20"))+
+  geom_line(aes(x = DateTimeUTC, y = RW30, color ="RW30"))+
+  geom_line(aes(x = DateTimeUTC, y = RW50, color ="RW50"))+
+  scale_color_manual(name = "Rolling Window", breaks = c("True","RW3", "RW4","RW10", "RW20", "RW30", "RW50"), values = c("True" = "orange", "RW3" = "orangered1", "RW4" = "orchid", "RW10" = "turquoise4", "RW20" = "steelblue", "RW30" = "springgreen", "RW50" = "maroon")) +
+  ggtitle("Varying Rolling Window sizes applied on speed")+
+  labs(x= "Time", y="Speed (m/s)")
+  
+
+
+# If the rolling window is not too large the varying characteristics are still visible. But if the rolling window is too large, you will get a mean over the whole time period
+# Analogy: Smoothing image with 9x9 window and calculating the average. But if the window is as large as the image (pixelxpixel) the image will only show one value
+
+#-------------------------------------------------------------------------------------------------------------------------
+
