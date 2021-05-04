@@ -8,7 +8,13 @@ library(purrr)
 library(zoo)
 library(tidyr)
 library(scales)
+library(sp)
 
+
+library(raster)
+library(geosphere)
+library(rgeos)
+#-------------------------------------------------------------------------------------------------------------------------
 #IMPORT DATA
 
 wildschwein_BE <- read_delim("wildschwein_BE_2056.csv",",")
@@ -82,7 +88,7 @@ wildschwein_BE %>%
   geom_point() +
   scale_x_datetime(limits = c(as.POSIXct("2014-09-01 00:00 UTC"), as.POSIXct("2015-01-01 00:00 UTC"))) +
   geom_line(size = 0.1)
-
+#-------------------------------------------------------------------------------------------------------------------------
 
 # TASK 2: DERIVING MOVEMENT PARAMETERS I: SPEED
 
@@ -96,6 +102,160 @@ wildschwein_BE <-  wildschwein_BE %>%
 wildschwein_BE <- wildschwein_BE %>%
   group_by(TierName) %>%
   mutate(speed = steplength/timelag)
+#-------------------------------------------------------------------------------------------------------------------------
+
+# TASK 3: CROSS-SCALE MOVEMENT ANALYSIS
+
+#import data
+caro60 <- read_delim("caro60.csv",",")
+caro60 <- st_as_sf(caro60, coords = c("E", "N"), crs = 2056, remove = FALSE)
+nrow(caro60) #200
+
+# timelag, steplength and speed for caro60
+
+# modify time format of Column DateTimeUTC
+caro60$DateTimeUTC <- format(as.POSIXct(strptime(caro60$DatetimeUTC, "%d.%m.%Y %H:%M", tz="UTC")), format = "%Y-%m-%d %H:%M")
+caro60$DateTimeUTC <- ymd_hm(caro60$DateTimeUTC)
 
 
+# calculate and and new column with time lag
+caro60$timelag <- as.integer(difftime(lead(caro60$DateTimeUTC),caro60$DateTimeUTC, units = "secs"))
+
+#steplength
+caro60 <-  caro60 %>%
+  group_by(TierName) %>%
+  mutate(steplength = sqrt((E- lead(E,1))^2 + (N -lead(N,1))^2))
+
+#speed
+caro60 <- caro60 %>%
+  group_by(TierName) %>%
+  mutate(speed = steplength/timelag)
+
+
+
+#Subsetting
+caro_3 <- caro60[seq(1,nrow(caro60),by=3),] #every 3rd
+caro_6 <- caro60[seq(1,nrow(caro60),by=6),] #every 6th
+caro_9 <- caro60[seq(1,nrow(caro60),by=9),] #every 9th
+nrow(caro_3) #67
+nrow(caro_6) #34
+nrow(caro_9) #23
+
+# timelag, steplength and speed for caro_3
+
+# modify time format of Column DateTimeUTC
+caro_3$DateTimeUTC <- format(as.POSIXct(strptime(caro_3$DatetimeUTC, "%d.%m.%Y %H:%M", tz="UTC")), format = "%Y-%m-%d %H:%M")
+caro_3$DateTimeUTC <- ymd_hm(caro_3$DateTimeUTC)
+
+
+# calculate and and new column with time lag
+caro_3$timelag <- as.integer(difftime(lead(caro_3$DateTimeUTC),caro_3$DateTimeUTC, units = "secs"))
+
+#steplength
+caro_3 <-  caro_3 %>%
+  group_by(TierName) %>%
+  mutate(steplength = sqrt((E- lead(E,1))^2 + (N -lead(N,1))^2))
+
+#speed
+caro_3 <- caro_3 %>%
+  group_by(TierName) %>%
+  mutate(speed = steplength/timelag)
+
+# timelag, steplength and speed for caro_6
+
+# modify time format of Column DateTimeUTC
+caro_6$DateTimeUTC <- format(as.POSIXct(strptime(caro_6$DatetimeUTC, "%d.%m.%Y %H:%M", tz="UTC")), format = "%Y-%m-%d %H:%M")
+caro_6$DateTimeUTC <- ymd_hm(caro_6$DateTimeUTC)
+
+
+# calculate and and new column with time lag
+caro_6$timelag <- as.integer(difftime(lead(caro_6$DateTimeUTC),caro_6$DateTimeUTC, units = "secs"))
+
+#steplength
+caro_6 <-  caro_6 %>%
+  group_by(TierName) %>%
+  mutate(steplength = sqrt((E- lead(E,1))^2 + (N -lead(N,1))^2))
+
+#speed
+caro_6 <- caro_6 %>%
+  group_by(TierName) %>%
+  mutate(speed = steplength/timelag)
+
+# timelag, steplength and speed for caro_9
+
+# modify time format of Column DateTimeUTC
+caro_9$DateTimeUTC <- format(as.POSIXct(strptime(caro_9$DatetimeUTC, "%d.%m.%Y %H:%M", tz="UTC")), format = "%Y-%m-%d %H:%M")
+caro_9$DateTimeUTC <- ymd_hm(caro_9$DateTimeUTC)
+
+
+# calculate and and new column with time lag
+caro_9$timelag <- as.integer(difftime(lead(caro_9$DateTimeUTC),caro_9$DateTimeUTC, units = "secs"))
+
+#steplength
+caro_9 <-  caro_9 %>%
+  group_by(TierName) %>%
+  mutate(steplength = sqrt((E- lead(E,1))^2 + (N -lead(N,1))^2))
+
+#speed
+caro_9 <- caro_9 %>%
+  group_by(TierName) %>%
+  mutate(speed = steplength/timelag)
+
+#Visualisation of coarser datasets
+
+#from points to line
+caro60_line <- caro60 %>% group_by(TierName) %>% summarise(do_union = FALSE) %>% st_cast("LINESTRING")
+caro_3_line <- caro_3 %>% group_by(TierName) %>% summarise(do_union = FALSE) %>% st_cast("LINESTRING")
+caro_6_line <- caro_6 %>% group_by(TierName) %>% summarise(do_union = FALSE) %>% st_cast("LINESTRING")
+caro_9_line <- caro_9 %>% group_by(TierName) %>% summarise(do_union = FALSE) %>% st_cast("LINESTRING")
+
+#plots
+
+#3min
+ggplot() +
+  geom_sf(data = caro60, aes(color = "1 minute"), alpha = 0.8) +
+  geom_sf(data = caro60_line, aes(color = "1 minute"), alpha = 0.8) +
+  geom_sf(data = caro_3, aes(color = "3 minutes"), alpha = 1)+
+  geom_sf(data = caro_3_line, aes(color = "3 minutes"), alpha = 1)+
+  coord_sf(datum = 2056) +
+  scale_color_manual(name = "Trajectory", breaks = c("1 minute", "3 minutes"), values = c("1 minute" = "mistyrose", "3 minutes" = "turquoise")) +
+  ggtitle("Comparing original- with 3 minutes-resampled data") +
+  labs(x="E", y="N") #How to show only every second tick on both axis? and change alpha in legend?
+
+#6min
+ggplot() +
+  geom_sf(data = caro60, aes(color = "1 minute"), alpha = 0.8) +
+  geom_sf(data = caro60_line, aes(color = "1 minute"), alpha = 0.8) +
+  geom_sf(data = caro_6, aes(color = "6 minutes"), alpha = 1)+
+  geom_sf(data = caro_6_line, aes(color = "6 minutes"), alpha = 1)+
+  coord_sf(datum = 2056) +
+  scale_color_manual(name = "Trajectory", breaks = c("1 minute", "6 minutes"), values = c("1 minute" = "mistyrose", "6 minutes" = "turquoise")) +
+  ggtitle("Comparing original- with 6 minutes-resampled data") +
+  labs(x="E", y="N") #How to show only every second tick on both axis? and change alpha in legend?
+
+#9min
+ggplot() +
+  geom_sf(data = caro60, aes(color = "1 minute"), alpha = 0.8) +
+  geom_sf(data = caro60_line, aes(color = "1 minute"), alpha = 0.8) +
+  geom_sf(data = caro_9, aes(color = "9 minutes"), alpha = 1)+
+  geom_sf(data = caro_9_line, aes(color = "9 minutes"), alpha = 1)+
+  coord_sf(datum = 2056) +
+  scale_color_manual(name = "Trajectory", breaks = c("1 minute", "9 minutes"), values = c("1 minute" = "mistyrose", "9 minutes" = "turquoise")) +
+  ggtitle("Comparing original- with 9 minutes-resampled data") +
+  labs(x="E", y="N") #How to show only every second tick on both axis? and change alpha in legend?
+
+
+#Less movement is visible. Connections between more stationary sections are reduced to straight lines. Stationary sections has smaller diameter
+
+
+#Comparison of speed at different sampling intervals
+ggplot() +
+  geom_line(data= caro60, aes(x=DateTimeUTC, y= speed, color="1 minute")) +
+  geom_line(data= caro_3, aes(x=DateTimeUTC, y= speed, color="3 minutes")) +
+  geom_line(data= caro_6, aes(x=DateTimeUTC, y= speed, color="6 minutes")) +
+  geom_line(data= caro_9, aes(x=DateTimeUTC, y= speed, color="9 minutes")) +
+  scale_color_manual(name = "colour", breaks = c("1 minute", "3 minutes", "6 minutes", "9 minutes"), values = c("1 minute" = "red", "3 minutes" = "green", "6 minutes" = "blue", "9 minutes" = "purple")) +
+  ggtitle("Comparing derived speed at different sampling intervals")+
+  labs(x= "Time", y="Speed (m/s)")
+#-------------------------------------------------------------------------------------------------------------------------
 
