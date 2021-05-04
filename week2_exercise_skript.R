@@ -84,4 +84,18 @@ wildschwein_BE %>%
   geom_line(size = 0.1)
 
 
+# TASK 2: DERIVING MOVEMENT PARAMETERS I: SPEED
+
+# calculate step length (distance between two gps points)
+wildschwein_BE <-  wildschwein_BE %>%
+  group_by(TierName) %>%
+  mutate(steplength = sqrt((E- lead(E,1))^2 + (N -lead(N,1))^2))
+
+
+# caluclate speed (distance/time)
+wildschwein_BE <- wildschwein_BE %>%
+  group_by(TierName) %>%
+  mutate(speed = steplength/timelag)
+
+
 
